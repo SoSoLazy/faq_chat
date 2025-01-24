@@ -1,19 +1,15 @@
-from openai import OpenAI
+import os
+from clients.open_ai import open_ai_client
 
-OPENAI_API_KEY = """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"""
+OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
 
 
 class LLMService:
-    def __init__(self):
-        self.client = OpenAI(api_key=OPENAI_API_KEY)
-
-    def chat_completions(self, message):
-        response = self.client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[
-                {"role": "system", "content": "너는 도와주는 사람이야."},
-                {"role": "user", "content": message}
-            ]
-        )
-
-        return response
+    """
+    메인 서비스!
+    - 채팅 관리
+    - 세션 관리
+    """
+    
+    def one_time_chat(self, message:str):
+        return open_ai_client.chat_completions(message=message)

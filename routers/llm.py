@@ -9,4 +9,4 @@ llm_service = LLMService()
 
 @router.post("/chat")
 def chat(chat_in: ChatBaseModel):
-    return llm_service.chat_completions(chat_in.message)
+    return llm_service.one_time_chat(chat_in.message)
