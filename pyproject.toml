@@ -1,0 +1,22 @@
+[tool.poetry]
+name = "faq_chat"
+version = "0.1.0"
+description = ""
+authors = ["ian.so"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.12"
+fastapi = "^0.115.7"
+openai = "^1.60.0"
+uvicorn = "^0.34.0"
+
+
+[tool.poetry.group.dev.dependencies]
+black = "^24.10.0"
+flake8 = "^7.1.1"
+mypy = "^1.14.1"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
