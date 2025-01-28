@@ -1,19 +1,18 @@
-from typing import Optional
-
+from typing import Optional, Dict, Any
 import sqlite3
 from threading import Lock
 
-# TODO: 더 효율적인 방법으로 데이터를 가져오도록 바꾸기
+#TODO: 더 효율적인 방법을 확인하기
 class SQLiteClient:
     def __init__(self, db_path):
         self.db_path = db_path
-        self.lock = Lock()  # 스레드 안전을 위한 락
+        self.lock = Lock()
 
     def _get_connection(self):
         return sqlite3.connect(self.db_path, check_same_thread=False)
 
     def execute_query(self, query, params=None, commit=False):
-        with self.lock:  # 스레드 안전 보장
+        with self.lock:
             with self._get_connection() as conn:
                 cursor = conn.cursor()
                 if params:
@@ -33,14 +32,25 @@ class SQLiteClient:
         sql = f"INSERT INTO {table_name} VALUES ({placeholders})"
         self.execute_query(sql, params=data, commit=True)
 
-    
-    def read_data(self, table_name, session_id:Optional[str]=None):
-        sql = f"SELECT * FROM {table_name}"
+    def upsert_data(self, table_name, data: Dict[str, Any], conflict_column: str):
+        columns = ', '.join(data.keys())
+        placeholders = ', '.join(['?'] * len(data))
+        updates = ', '.join([f"{col} = excluded.{col}" for col in data.keys()])
         
-        if session_id:
-            sql += f'\nWHERE session_id = "{session_id}"'
+        sql = f"""
+        INSERT INTO {table_name} ({columns})
+        VALUES ({placeholders})
+        ON CONFLICT({conflict_column}) DO UPDATE SET {updates};
+        """
+        self.execute_query(sql, params=list(data.values()), commit=True)
 
-        return self.execute_query(sql)
+    def read_data(self, table_name, session_id: Optional[str] = None):
+        sql = f"SELECT * FROM {table_name}"
+        params = []
+        if session_id:
+            sql += "\nWHERE session_id = ?"
+            params.append(session_id)
+        return self.execute_query(sql, params=params)
 
     def close(self):
         pass

@@ -7,12 +7,13 @@ import json
 
 
 from clients.sqlite import SQLiteClient
-from schemas.chat_history import ChatHistory, ChatHistoryList
+from schemas.chat_history import ChatHistoryList
 
 DB_PATH = "sqlite.db"
 TABLE_NAME = "chat_history"
+CONFLICT_COLUMNS = "session_id"
 COLUMNS = """
-session_id STRING,
+session_id STRING PRIMARY KEY,
 chat_history_list STRING
 """
 
@@ -34,9 +35,14 @@ class SessionService:
         return f"{timestamp}_{random_string}"
 
     def upsert_chat_history(self, session_id:str, chat_history_list: ChatHistoryList):
-        self.sqlite_client.insert_data(TABLE_NAME, (
-            session_id, json.dumps(chat_history_list.model_dump_json())
-        ))
+        self.sqlite_client.upsert_data(
+            TABLE_NAME, 
+            {
+                "session_id": session_id,
+                "chat_history_list": chat_history_list.model_dump_json(),
+            },
+            conflict_column=CONFLICT_COLUMNS
+        )
 
     def get_chat_history(self, session_id:Optional[str] = None) -> List:
         return self.sqlite_client.read_data(TABLE_NAME, session_id)

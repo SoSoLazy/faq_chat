@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, List, Dict
 
 import os
 import json
@@ -40,37 +40,36 @@ class LLMService:
         return chat
 
     def chat_session(self, message:str, session_id: Optional[str]):
-        if session_id is None:
+        if (session_id is None):
             session_id = self.session_service.generate_session_id()
-            return {
-                "response": self.chat_one_time(message=message),
-                "session_id": session_id
-            }
-        else:
-            chat_history_list = self.session_service.get_chat_history(session_id=session_id)
+            chat_history_list: List[Dict] = [] 
+        elif not (past_data := self.session_service.get_chat_history(session_id=session_id)):
+            chat_history_list = [] 
+        else:                                                                 
+            past_chat_history_list = json.loads(past_data[0][1])
+            chat_history_list = past_chat_history_list["chat_history_list"]
             
             messages_with_session = ""
             for chat_history_raw in chat_history_list:
-                chat_history = json.loads(chat_history_raw)
-                messages_with_session += f"\nQ : {chat_history["request"]}"
-                messages_with_session += f"\nA : {chat_history["request"]}"
+                messages_with_session += f"\nQ : {chat_history_raw["request"]}"
+                messages_with_session += f"\nA : {chat_history_raw["response"]}"
             messages_with_session += f"\nQ : {message}"
             
-            response = open_ai_client.chat_completions(message=message)
+        response = open_ai_client.chat_completions(message=message)
 
-            chat_history = {
-                "request": message,
-                "response": response
-            }
-            chat_history_list.append(chat_history)
-            
-            self.session_service.upsert_chat_history(
-                session_id, chat_history_list=ChatHistoryList.model_validate({
-                    "chat_history_list": chat_history_list
-                })
-            )
-            
-            return {
-                "response": response,
-                "session_id": session_id
-            }
+        chat_history = {
+            "request": message,
+            "response": response
+        }
+        chat_history_list.append(chat_history)
+        
+        self.session_service.upsert_chat_history(
+            session_id, chat_history_list=ChatHistoryList.model_validate({
+                "chat_history_list": chat_history_list
+            })
+        )
+        
+        return {
+            "response": response,
+            "session_id": session_id
+        }
