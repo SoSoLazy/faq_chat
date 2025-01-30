@@ -1,12 +1,9 @@
 from fastapi import APIRouter
-from services.llm_service import LLMService
 
 from schemas.llm_model import ChatBaseModel
-from services.session_service import session_service
+from services.llm_service import llm_service
 
 router = APIRouter()
-llm_service = LLMService(session_service=session_service)
-
 
 @router.post("/chat")
 def chat(chat_in: ChatBaseModel):

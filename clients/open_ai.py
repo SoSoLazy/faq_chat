@@ -21,6 +21,14 @@ class OpenAiCLient:
         logging.info(response)
 
         return response.choices[0].message.content
-        # return "안녕하세요! 무엇을 도와드릴까요?"
+    
+    def embedding(self, message:str) -> str:
+        response = self.client.embeddings.create(
+            model="text-embedding-3-small",
+            input=message
+        )
+        logging.info(message, response)
+
+        return response.data[0].embedding
 
 open_ai_client = OpenAiCLient(OPENAI_API_KEY)
