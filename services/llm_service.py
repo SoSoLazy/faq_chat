@@ -5,10 +5,11 @@ import json
 
 from clients.open_ai import open_ai_client
 from services.session_service import SessionService, session_service
+from services.rag_service import RagService, rag_service
 from schemas.chat_history import ChatHistory, ChatHistoryList
 
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
-
+SESSION_LIMIT_FOR_CHAT = 8 # 응답에 활용하기 위한 과거 채팅 수
 
 class LLMService:
     """
@@ -17,8 +18,9 @@ class LLMService:
     - 세션 관리
     """
 
-    def __init__(self, session_service: SessionService):
+    def __init__(self, session_service: SessionService, rag_service :RagService):
         self.session_service = session_service
+        self.rag_service = rag_service
 
     def chat_one_time(self, message:str):
         session_id = self.session_service.generate_session_id()
@@ -29,17 +31,18 @@ class LLMService:
             "request": message,
             "response": chat
         })
+        chat_history_list = [chat_history]
 
         self.session_service.upsert_chat_history(
-            session_id, chat_history_list=ChatHistoryList.model_validate(
-                {
-                    "chat_history_list": list(chat_history)
-                }
-            )
+            session_id, chat_history_list=ChatHistoryList.model_validate({
+                    "chat_history_list": chat_history_list
+            })
         )
         return chat
 
     def chat_session(self, message:str, session_id: Optional[str]):
+        messages_with_session = ""
+
         # 1) session_id 가 none 인 경우 세션 생성
         if (session_id is None):
             session_id = self.session_service.generate_session_id()
@@ -52,13 +55,17 @@ class LLMService:
             past_chat_history_list = json.loads(past_data[0][1])
             chat_history_list = past_chat_history_list["chat_history_list"]
             
-            messages_with_session = ""
-            for chat_history_raw in chat_history_list:
-                messages_with_session += f"\nQ : {chat_history_raw["request"]}"
-                messages_with_session += f"\nA : {chat_history_raw["response"]}"
-            messages_with_session += f"\nQ : {message}"
+            for chat_history_raw in chat_history_list[-SESSION_LIMIT_FOR_CHAT:]:
+                messages_with_session += f"\n질문 : {chat_history_raw["request"]}"
+                messages_with_session +=  f"\n응답 : {chat_history_raw["response"]}"
         
-        response = open_ai_client.chat_completions(message=message)
+        retrival_result = " ".join(self.rag_service.search(message))
+        
+        response = open_ai_client.chat_completions(
+            message=message, 
+            chat_history=messages_with_session,
+            retrival_result=retrival_result,
+        )
 
         chat_history = {
             "request": message,
@@ -78,4 +85,4 @@ class LLMService:
             "session_id": session_id
         }
 
-llm_service = LLMService(session_service=session_service)
+llm_service = LLMService(session_service=session_service, rag_service=rag_service)

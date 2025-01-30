@@ -28,7 +28,7 @@ class RagService:
             self.chroma_client.add_document(
                 doc_id = f"rag_doc_{idx}",
                 key_text=row_dict["question"],
-                value_text = f'Q: {row_dict["question"]}\nA: {row_dict["answer"]}'
+                value_text = f'질문: {row_dict["question"]}\n응답: {row_dict["answer"]}'
             )
 
     def search(self, message):

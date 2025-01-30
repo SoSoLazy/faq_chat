@@ -16,7 +16,7 @@ class ChromaClient:
     def search(self, query: str, n_results: int = 4) -> List[str]:
         query_embedding = self.embed_function(query)
         results = self.collection.query(query_embeddings=[query_embedding], n_results=n_results)
-        return results["documents"]
+        return results["documents"][0]
 
     def get(self, doc_id:str):
         return self.collection.get(doc_id)
