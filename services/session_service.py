@@ -23,9 +23,18 @@ class SessionService:
     sqlite client 에 접근하여 채팅 내역을 관리하여 세션별 채팅을 지속할 수 있도록 해 줍니다.    
     """
 
+    _instance = None
+
     def __init__(self, db_path):
         self.sqlite_client = SQLiteClient(db_path)
         self.sqlite_client.create_table(TABLE_NAME, COLUMNS)
+
+    @classmethod
+    def get_instance(cls):
+        if cls._instance is None:
+            cls._instance = SessionService(DB_PATH)
+        return cls._instance
+
 
     def generate_session_id(self) -> str:
         now = pendulum.now('UTC')
@@ -46,5 +55,3 @@ class SessionService:
 
     def get_chat_history(self, session_id:Optional[str] = None) -> List:
         return self.sqlite_client.read_data(TABLE_NAME, session_id)
-
-session_service = SessionService(db_path=DB_PATH)

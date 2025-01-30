@@ -3,12 +3,11 @@ from typing import Optional, List, Dict
 import os
 import json
 
-from clients.open_ai import open_ai_client
-from services.session_service import SessionService, session_service
-from services.rag_service import RagService, rag_service
+from clients.open_ai import OpenAiCLient
+from services.session_service import SessionService
+from services.rag_service import RagService
 from schemas.chat_history import ChatHistory, ChatHistoryList
 
-OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
 SESSION_LIMIT_FOR_CHAT = 8 # 응답에 활용하기 위한 과거 채팅 수
 
 class LLMService:
@@ -18,14 +17,27 @@ class LLMService:
     - 세션 관리
     """
 
-    def __init__(self, session_service: SessionService, rag_service :RagService):
+    _instance = None
+
+    def __init__(self, session_service: SessionService, rag_service :RagService, open_ai_client: OpenAiCLient):
         self.session_service = session_service
         self.rag_service = rag_service
+        self.open_ai_client = open_ai_client
+
+    @classmethod
+    def get_instance(cls):
+        if cls._instance is None:
+            cls._instance = LLMService(
+                session_service=SessionService.get_instance(),
+                rag_service=RagService.get_instance(),
+                open_ai_client=OpenAiCLient.get_instance(),
+            )
+        return cls._instance
 
     def chat_one_time(self, message:str):
         session_id = self.session_service.generate_session_id()
 
-        chat = open_ai_client.chat_completions(message=message)
+        chat = self.open_ai_client.chat_completions(message=message)
         
         chat_history = ChatHistory.model_validate({
             "request": message,
@@ -35,7 +47,7 @@ class LLMService:
 
         self.session_service.upsert_chat_history(
             session_id, chat_history_list=ChatHistoryList.model_validate({
-                    "chat_history_list": chat_history_list
+                "chat_history_list": chat_history_list
             })
         )
         return chat
@@ -61,7 +73,7 @@ class LLMService:
         
         retrival_result = " ".join(self.rag_service.search(message))
         
-        response = open_ai_client.chat_completions(
+        response = self.open_ai_client.chat_completions(
             message=message, 
             chat_history=messages_with_session,
             retrival_result=retrival_result,
@@ -84,5 +96,3 @@ class LLMService:
             "response": response,
             "session_id": session_id
         }
-
-llm_service = LLMService(session_service=session_service, rag_service=rag_service)

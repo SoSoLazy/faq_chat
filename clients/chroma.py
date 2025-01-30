@@ -1,13 +1,13 @@
 from typing import Optional, List
 
 import chromadb
-from clients.open_ai import open_ai_client
+from clients.open_ai import OpenAiCLient, OPENAI_API_KEY
 
 class ChromaClient:
     def __init__(self, db_path, collection_name):
         self.client = chromadb.PersistentClient(path=db_path)
         self.collection = self.client.get_or_create_collection(collection_name)
-        self.embed_function = open_ai_client.embedding
+        self.embed_function = OpenAiCLient(OPENAI_API_KEY).embedding
     
     def add_document(self, doc_id: str, key_text, value_text: str, metadata: Optional[dict] = None):
         embedding = self.embed_function(key_text)

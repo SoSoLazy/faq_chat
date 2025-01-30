@@ -13,8 +13,17 @@ class RagService:
     RAG 검색기능 제공
     """
     
+    _instance = None
+
     def __init__(self, db_path, collection_name):
         self.chroma_client = ChromaClient(db_path, collection_name)
+
+    @classmethod
+    def get_instance(cls):
+        if cls._instance is None:
+            cls._instance = RagService(DB_PATH, COLLECTION_NAME)
+            cls._instance.set_data()
+        return cls._instance
     
     def set_data(self, file_path="data/final_result.csv"):
         df = pd.read_csv(file_path)
@@ -33,6 +42,3 @@ class RagService:
 
     def search(self, message):
         return self.chroma_client.search(message)
-
-rag_service = RagService(DB_PATH, COLLECTION_NAME)
-rag_service.set_data()

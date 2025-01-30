@@ -1,14 +1,14 @@
 from fastapi import APIRouter
 
-from services.session_service import session_service
-from services.rag_service import rag_service
+from services.session_service import SessionService
+from services.rag_service import RagService
 
 router = APIRouter()
 
 @router.get("/chat_histories")
 def chat():
-    return session_service.get_chat_history()
+    return SessionService.get_instance().get_chat_history()
 
 @router.post("/rag_retrival")
 def rag_retrical(input_dict: dict):
-    return rag_service.search(input_dict["message"])
+    return RagService.get_instance().search(input_dict["message"])

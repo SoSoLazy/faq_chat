@@ -7,13 +7,21 @@ from openai import OpenAI
 
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
 
-
 class OpenAiCLient:
     """
     openAI와 api를 통해 통신하는 클라이언트 클래스 입니다.
     """
+
+    _instance = None
+    
     def __init__(self, api_key):
         self.client = OpenAI(api_key=api_key)
+
+    @classmethod
+    def get_instance(cls):
+        if cls._instance is None:
+            cls._instance = OpenAiCLient(OPENAI_API_KEY)
+        return cls._instance
 
     def chat_completions(self, message: str, chat_history: Optional[str]=None, retrival_result: Optional[str]=None) -> str:
         # 0) 프롬프트 작성
@@ -54,5 +62,3 @@ class OpenAiCLient:
         logging.info(message, response)
 
         return response.data[0].embedding
-
-open_ai_client = OpenAiCLient(OPENAI_API_KEY)
