@@ -9,6 +9,9 @@ from services.rag_service import RagService
 from schemas.chat_history import ChatHistory, ChatHistoryList
 
 SESSION_LIMIT_FOR_CHAT = 8 # 응답에 활용하기 위한 과거 채팅 수
+THRESHOLD_FOR_VALID_REQUEST = 1
+NONE_FAQ_REQUEST_MESSAGE = "저는 스마트 스토어 FAQ를 위한 챗봇입니다. 스마트 스토어에 대한 질문을 부탁드립니다."
+
 
 class LLMService:
     """
@@ -71,12 +74,18 @@ class LLMService:
                 messages_with_session += f"\n질문 : {chat_history_raw["request"]}"
                 messages_with_session +=  f"\n응답 : {chat_history_raw["response"]}"
         
-        retrival_result = " ".join(self.rag_service.search(message))
+        retrival_result = self.rag_service.search(message)
+
+        # 스마트 스토어와 관계 없는 질문이 들어온 경우, 답변 회피
+        if min(retrival_result["distances"]) >= THRESHOLD_FOR_VALID_REQUEST:
+            return NONE_FAQ_REQUEST_MESSAGE
+
+        retrival_prompt = " ".join(retrival_result["documents"][0])
         
         response = self.open_ai_client.chat_completions(
             message=message, 
             chat_history=messages_with_session,
-            retrival_result=retrival_result,
+            retrival_result=retrival_prompt,
         )
 
         chat_history = {
