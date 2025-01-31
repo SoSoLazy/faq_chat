@@ -55,17 +55,24 @@ class LLMService:
         )
         return chat
 
+    def recommender(self, message: str) -> Optional[List[str]]:
+        """
+        질의응답 맥락에서 사용자가 궁금해할만한 다른 내용 추천
+        """
+        return None
+
     def chat_session(self, message:str, session_id: Optional[str]):
         messages_with_session = ""
 
-        # 1) session_id 가 none 인 경우 세션 생성
+        # 1: 세션 관리
+        # 1-1) session_id 가 none 인 경우 세션 생성
         if (session_id is None):
             session_id = self.session_service.generate_session_id()
             chat_history_list: List[Dict] = [] 
-        # 2) 과거 데이터가 없는 경우
+        # 1-2) 과거 데이터가 없는 경우
         elif not (past_data := self.session_service.get_chat_history(session_id=session_id)):
             chat_history_list = [] 
-        # 3) 과거 데이터가 있는 경우, 프롬프트 생성
+        # 1-3) 과거 데이터가 있는 경우, 프롬프트 생성
         else:
             past_chat_history_list = json.loads(past_data[0][1])
             chat_history_list = past_chat_history_list["chat_history_list"]
@@ -73,28 +80,35 @@ class LLMService:
             for chat_history_raw in chat_history_list[-SESSION_LIMIT_FOR_CHAT:]:
                 messages_with_session += f"\n질문 : {chat_history_raw["request"]}"
                 messages_with_session +=  f"\n응답 : {chat_history_raw["response"]}"
-        
-        retrival_result = self.rag_service.search(message)
 
-        # 스마트 스토어와 관계 없는 질문이 들어온 경우, 답변 회피
-        if min(retrival_result["distances"]) >= THRESHOLD_FOR_VALID_REQUEST:
+
+        # 2: 스마트 스토어와 무관한 질문을 하는지 확인
+        # "현재 들어온 질문"이 스마트 스토어와 관계 없는 질문이 들어온 경우, 답변 회피
+        retrival_for_now_message = self.rag_service.search(
+            message
+        )
+        if min(retrival_for_now_message["distances"][0]) >= THRESHOLD_FOR_VALID_REQUEST:
             return NONE_FAQ_REQUEST_MESSAGE
-
-        retrival_prompt = " ".join(retrival_result["documents"][0])
         
+        retrival_for_all_messages = self.rag_service.search(
+            f"{messages_with_session}\n질문 : {message}"
+        )
+
+        # 3: RAG 검색 및 응답
+        retrival_prompt = " ".join(retrival_for_all_messages["documents"][0])
         response = self.open_ai_client.chat_completions(
             message=message, 
             chat_history=messages_with_session,
             retrival_result=retrival_prompt,
         )
 
+        # 4: 현재 세션의 채팅 결과를 다시 DB에 저장
         chat_history = {
             "request": message,
             "response": response
         }
         chat_history_list.append(chat_history)
         
-        # 채팅 결과를 다시 세션에 저장
         self.session_service.upsert_chat_history(
             session_id, chat_history_list=ChatHistoryList.model_validate({
                 "chat_history_list": chat_history_list
