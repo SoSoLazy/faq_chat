@@ -1,5 +1,6 @@
 from tqdm import tqdm
 import pandas as pd
+import pickle
 
 from clients.chroma import ChromaClient
 from config import RAG_DATA_FILE_PATH, RAG_DB_PATH, RAG_COLLECTION_NAME
@@ -15,7 +16,7 @@ class RagService:
 
     def __init__(self, db_path, collection_name):
         self.chroma_client = ChromaClient(db_path, collection_name)
-        self.file_path = RAG_DATA_FILE_PATH
+        self.rag_data_file_path = RAG_DATA_FILE_PATH
 
     @classmethod
     def get_instance(cls):
@@ -24,8 +25,32 @@ class RagService:
             cls._instance.set_data()
         return cls._instance
     
+    def preprocessing(self) -> pd.DataFrame:
+        """
+        데이터 전처리 클래스
+        """
+
+        data = pickle.load(open(self.rag_data_file_path, 'rb'))
+        df = pd.DataFrame(data.items(), columns=['question', 'answer'])
+        
+        preprocessed_answer_list = []
+        additional_request_list = []
+        for ans in df['answer'].values:
+            preprocessed_answer_list.append(ans.split("위 도움말이 도움이 되었나요?")[0].strip())
+
+        
+            additional_request_list.append(
+                ans.split("관련 도움말/키워드")[-1].replace("도움말 닫기", "").strip()
+                if "관련 도움말/키워드" in ans
+                else ""
+            )
+
+        df['preprocessed_answer'] = preprocessed_answer_list
+        df['additional_request'] = additional_request_list
+        return df
+
     def set_data(self):
-        df = pd.read_csv(self.file_path)
+        df = self.preprocessing()
 
         for idx, row in tqdm(df.iterrows()):
             if self.chroma_client.get(f"rag_doc_{idx}")["ids"]:
@@ -41,10 +66,3 @@ class RagService:
 
     def search(self, message):
         return self.chroma_client.search(message)
-
-    def preprocessing(self):
-        """
-        데이터 전처리 클래스
-        """
-
-        pass

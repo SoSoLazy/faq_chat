@@ -3,6 +3,10 @@ import uvicorn
 from routers.health import router as health_router
 from routers.llm import router as llm_router
 from routers.admin import router as admin_router
+from services.rag_service import RagService
+
+# make RAG data
+RagService.get_instance()
 
 app = FastAPI()
 
