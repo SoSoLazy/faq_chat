@@ -9,7 +9,7 @@ import json
 from clients.sqlite import SQLiteClient
 from schemas.chat_history import ChatHistoryList
 
-DB_PATH = "sqlite.db"
+DB_PATH = "databases/sqlite.db"
 TABLE_NAME = "chat_history"
 CONFLICT_COLUMNS = "session_id"
 COLUMNS = """

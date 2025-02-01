@@ -5,6 +5,7 @@ from clients.chroma import ChromaClient
 
 DB_PATH = "chroma.db"
 COLLECTION_NAME = "faq_rag"
+FILE_PATH="data/final_result.csv"
 
 class RagService:
     """
@@ -17,6 +18,7 @@ class RagService:
 
     def __init__(self, db_path, collection_name):
         self.chroma_client = ChromaClient(db_path, collection_name)
+        self.file_path = FILE_PATH
 
     @classmethod
     def get_instance(cls):
@@ -25,8 +27,8 @@ class RagService:
             cls._instance.set_data()
         return cls._instance
     
-    def set_data(self, file_path="data/final_result.csv"):
-        df = pd.read_csv(file_path)
+    def set_data(self):
+        df = pd.read_csv(self.file_path)
 
         for idx, row in tqdm(df.iterrows()):
             if self.chroma_client.get(f"rag_doc_{idx}")["ids"]:
@@ -42,3 +44,10 @@ class RagService:
 
     def search(self, message):
         return self.chroma_client.search(message)
+
+    def preprocessing(self):
+        """
+        데이터 전처리 클래스
+        """
+
+        pass
