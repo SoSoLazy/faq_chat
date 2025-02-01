@@ -2,10 +2,7 @@ from tqdm import tqdm
 import pandas as pd
 
 from clients.chroma import ChromaClient
-
-DB_PATH = "chroma.db"
-COLLECTION_NAME = "faq_rag"
-FILE_PATH="data/final_result.csv"
+from config import RAG_DATA_FILE_PATH, RAG_DB_PATH, RAG_COLLECTION_NAME
 
 class RagService:
     """
@@ -18,12 +15,12 @@ class RagService:
 
     def __init__(self, db_path, collection_name):
         self.chroma_client = ChromaClient(db_path, collection_name)
-        self.file_path = FILE_PATH
+        self.file_path = RAG_DATA_FILE_PATH
 
     @classmethod
     def get_instance(cls):
         if cls._instance is None:
-            cls._instance = RagService(DB_PATH, COLLECTION_NAME)
+            cls._instance = RagService(RAG_DB_PATH, RAG_COLLECTION_NAME)
             cls._instance.set_data()
         return cls._instance
     

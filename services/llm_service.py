@@ -1,16 +1,12 @@
 from typing import Optional, List, Dict
 
-import os
 import json
 
 from clients.open_ai import OpenAiCLient
 from services.session_service import SessionService
 from services.rag_service import RagService
 from schemas.chat_history import ChatHistory, ChatHistoryList
-
-SESSION_LIMIT_FOR_CHAT = 8 # 응답에 활용하기 위한 과거 채팅 수
-THRESHOLD_FOR_VALID_REQUEST = 1
-NONE_FAQ_REQUEST_MESSAGE = "저는 스마트 스토어 FAQ를 위한 챗봇입니다. 스마트 스토어에 대한 질문을 부탁드립니다."
+from config import LLM_THRESHOLD_FOR_VALID_REQUEST, LLM_SESSION_LIMIT_FOR_CHAT, LLM_NONE_FAQ_REQUEST_MESSAGE
 
 
 class LLMService:
@@ -77,7 +73,7 @@ class LLMService:
             past_chat_history_list = json.loads(past_data[0][1])
             chat_history_list = past_chat_history_list["chat_history_list"]
             
-            for chat_history_raw in chat_history_list[-SESSION_LIMIT_FOR_CHAT:]:
+            for chat_history_raw in chat_history_list[-LLM_SESSION_LIMIT_FOR_CHAT:]:
                 messages_with_session += f"\n질문 : {chat_history_raw["request"]}"
                 messages_with_session +=  f"\n응답 : {chat_history_raw["response"]}"
 
@@ -87,8 +83,8 @@ class LLMService:
         retrival_for_now_message = self.rag_service.search(
             message
         )
-        if min(retrival_for_now_message["distances"][0]) >= THRESHOLD_FOR_VALID_REQUEST:
-            return NONE_FAQ_REQUEST_MESSAGE
+        if min(retrival_for_now_message["distances"][0]) >= LLM_THRESHOLD_FOR_VALID_REQUEST:
+            return LLM_NONE_FAQ_REQUEST_MESSAGE
         
         retrival_for_all_messages = self.rag_service.search(
             f"{messages_with_session}\n질문 : {message}"
