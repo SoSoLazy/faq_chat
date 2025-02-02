@@ -1,9 +1,9 @@
 from typing import Optional
 
 import os
-import logging
 
 from openai import OpenAI
+from chromadb.utils.embedding_functions.openai_embedding_function import OpenAIEmbeddingFunction
 
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
 
@@ -16,6 +16,11 @@ class OpenAiCLient:
     
     def __init__(self, api_key):
         self.client = OpenAI(api_key=api_key)
+        self.embedding_model = OpenAIEmbeddingFunction(
+            api_key=OPENAI_API_KEY,
+            model_name="text-embedding-3-small",
+            dimensions=256
+        )
 
     @classmethod
     def get_instance(cls):
@@ -50,15 +55,15 @@ class OpenAiCLient:
             model="gpt-4o-mini",
             messages=messages
         )
-        logging.info(response)
 
         return response.choices[0].message.content
     
     def embedding(self, message:str) -> str:
-        response = self.client.embeddings.create(
-            model="text-embedding-3-small",
-            input=message
-        )
-        logging.info(message, response)
+        # response = self.client.embeddings.create(
+        #     model="text-embedding-3-small",
+        #     input=message
+        # )
 
-        return response.data[0].embedding
+        # return response.data[0].embedding
+        response = self.embedding_model([message])
+        return response[0]

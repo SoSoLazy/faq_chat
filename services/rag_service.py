@@ -22,7 +22,6 @@ class RagService:
     def get_instance(cls):
         if cls._instance is None:
             cls._instance = RagService(RAG_DB_PATH, RAG_COLLECTION_NAME)
-            cls._instance.set_data()
         return cls._instance
     
     def preprocessing(self) -> pd.DataFrame:
@@ -59,7 +58,6 @@ class RagService:
             row_dict = row.to_dict()
 
             value_text = f'질문: {row_dict["question"]}\n응답: {row_dict["preprocessed_answer"]}'
-
             if row_dict["additional_request"]:
                 value_text += f"\n추가적인 질문: {row_dict['additional_request']}"
 

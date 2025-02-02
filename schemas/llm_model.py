@@ -1,6 +1,6 @@
-from typing import Optional
+from typing import Optional, List
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class ChatBaseModel(BaseModel):
@@ -10,3 +10,6 @@ class ChatBaseModel(BaseModel):
 
 class ChatSessionIn(ChatBaseModel):
     pass
+
+class ChatSessionOut(ChatBaseModel):
+    additional_questions: Optional[List[str]] = Field(None) # 사용자가 궁금해할만한 다른 내용

@@ -6,6 +6,7 @@ from clients.open_ai import OpenAiCLient
 from services.session_service import SessionService
 from services.rag_service import RagService
 from schemas.chat_history import ChatHistory, ChatHistoryList
+from schemas.llm_model import ChatSessionOut
 from config import LLM_THRESHOLD_FOR_VALID_REQUEST, LLM_SESSION_LIMIT_FOR_CHAT, LLM_NONE_FAQ_REQUEST_MESSAGE
 
 
@@ -57,7 +58,7 @@ class LLMService:
         """
         return None
 
-    def chat_session(self, message:str, session_id: Optional[str]):
+    def chat_session(self, message:str, session_id: Optional[str]) -> ChatSessionOut:
         messages_with_session = ""
 
         # 1: 세션 관리
@@ -77,31 +78,30 @@ class LLMService:
                 messages_with_session += f"\n질문 : {chat_history_raw["request"]}"
                 messages_with_session +=  f"\n응답 : {chat_history_raw["response"]}"
 
-
         # 2: 스마트 스토어와 무관한 질문을 하는지 확인
         # "현재 들어온 질문"이 스마트 스토어와 관계 없는 질문이 들어온 경우, 답변 회피
         retrival_for_now_message = self.rag_service.search(
             message
         )
         if min(retrival_for_now_message["distances"][0]) >= LLM_THRESHOLD_FOR_VALID_REQUEST:
-            return LLM_NONE_FAQ_REQUEST_MESSAGE
-        
-        retrival_for_all_messages = self.rag_service.search(
-            f"{messages_with_session}\n질문 : {message}"
-        )
+            response_message = LLM_NONE_FAQ_REQUEST_MESSAGE
+        else:
+            retrival_for_all_messages = self.rag_service.search(
+                f"{messages_with_session}\n질문 : {message}"
+            )
 
-        # 3: RAG 검색 및 응답
-        retrival_prompt = " ".join(retrival_for_all_messages["documents"][0])
-        response = self.open_ai_client.chat_completions(
-            message=message, 
-            chat_history=messages_with_session,
-            retrival_result=retrival_prompt,
-        )
+            # 3: RAG 검색 및 응답
+            retrival_prompt = " ".join(retrival_for_all_messages["documents"][0])
+            response_message = self.open_ai_client.chat_completions(
+                message=message, 
+                chat_history=messages_with_session,
+                retrival_result=retrival_prompt,
+            )
 
         # 4: 현재 세션의 채팅 결과를 다시 DB에 저장
         chat_history = {
             "request": message,
-            "response": response
+            "response": response_message
         }
         chat_history_list.append(chat_history)
         
@@ -109,9 +109,11 @@ class LLMService:
             session_id, chat_history_list=ChatHistoryList.model_validate({
                 "chat_history_list": chat_history_list
             })
+        ) 
+
+        return ChatSessionOut.model_validate(
+            {
+                "message": response_message,
+                "session_id": session_id
+            }
         )
-        
-        return {
-            "response": response,
-            "session_id": session_id
-        }
