@@ -1,8 +1,8 @@
 from typing import Optional, Dict, Any
+
 import sqlite3
 from threading import Lock
 
-#TODO: 더 효율적인 방법을 확인하기
 class SQLiteClient:
     def __init__(self, db_path):
         self.db_path = db_path
@@ -42,6 +42,7 @@ class SQLiteClient:
         VALUES ({placeholders})
         ON CONFLICT({conflict_column}) DO UPDATE SET {updates};
         """
+
         self.execute_query(sql, params=list(data.values()), commit=True)
 
     def read_data(self, table_name, session_id: Optional[str] = None):

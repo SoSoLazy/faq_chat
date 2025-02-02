@@ -19,7 +19,7 @@ class SessionService:
 
     def __init__(self, db_path):
         self.sqlite_client = SQLiteClient(db_path)
-        self.sqlite_client.create_table(SESSION_TABLE_NAME, SESSION_CONFLICT_COLUMNS)
+        self.sqlite_client.create_table(SESSION_TABLE_NAME, SESSION_COLUMNS)
 
     @classmethod
     def get_instance(cls):
@@ -36,13 +36,14 @@ class SessionService:
         return f"{timestamp}_{random_string}"
 
     def upsert_chat_history(self, session_id:str, chat_history_list: ChatHistoryList):
+        
         self.sqlite_client.upsert_data(
             SESSION_TABLE_NAME, 
             {
                 "session_id": session_id,
                 "chat_history_list": chat_history_list.model_dump_json(),
             },
-            conflict_column=SESSION_COLUMNS
+            conflict_column=SESSION_CONFLICT_COLUMNS
         )
 
     def get_chat_history(self, session_id:Optional[str] = None) -> List:

@@ -57,11 +57,16 @@ class RagService:
                 continue
             
             row_dict = row.to_dict()
-            
+
+            value_text = f'질문: {row_dict["question"]}\n응답: {row_dict["preprocessed_answer"]}'
+
+            if row_dict["additional_request"]:
+                value_text += f"\n추가적인 질문: {row_dict['additional_request']}"
+
             self.chroma_client.add_document(
                 doc_id = f"rag_doc_{idx}",
                 key_text=row_dict["question"],
-                value_text = f'질문: {row_dict["question"]}\n응답: {row_dict["answer"]}'
+                value_text = value_text
             )
 
     def search(self, message):
