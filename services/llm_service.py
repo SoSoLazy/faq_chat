@@ -80,13 +80,13 @@ class LLMService:
 
         # 2: 스마트 스토어와 무관한 질문을 하는지 확인
         # "현재 들어온 질문"이 스마트 스토어와 관계 없는 질문이 들어온 경우, 답변 회피
-        retrival_for_now_message = self.rag_service.search(
+        retrival_for_now_message = self.rag_service.search_by_message(
             message
         )
         if min(retrival_for_now_message["distances"][0]) >= LLM_THRESHOLD_FOR_VALID_REQUEST:
             response_message = LLM_NONE_FAQ_REQUEST_MESSAGE
         else:
-            retrival_for_all_messages = self.rag_service.search(
+            retrival_for_all_messages = self.rag_service.search_by_message(
                 f"{messages_with_session}\n질문 : {message}"
             )
 
@@ -109,11 +109,37 @@ class LLMService:
             session_id, chat_history_list=ChatHistoryList.model_validate({
                 "chat_history_list": chat_history_list
             })
-        ) 
+        )
+
+        # 5: 응답 결과와 RAG 결과를 사용해서 사용자가 궁금해할만한 다른 내용 검색
+        
+        # 5-1) 채팅 히스토리에서 사용자가 궁금해 할 질문 검색 (LLM + RAG)
+        all_chat_histories = messages_with_session + f"\n질문: {message} \n응답: {response_message}"
+        next_question = self.open_ai_client.chat_predict_next_question(all_chat_histories)
+        retrival_data_for_next_question = self.rag_service.search_by_message(next_question)
+        nest_question_list = [
+            next_question.split("응답")[0].strip() for next_question in retrival_data_for_next_question["documents"][0]
+        ]
+
+        # 5-2) RAG 결과의 additional question 추출
+        nest_question_list += [
+            metadata.get("additional_request") for metadata in retrival_for_all_messages["metadatas"][0]
+            if metadata.get("additional_request")
+        ]
+
+        # 5-3) 위 두 결과를 통합하여, 다음에 질문할 목록 생성
+        additional_questions = self.open_ai_client.chat_make_next_question(
+            chat_history=chat_history,
+            next_question=", ".join(nest_question_list),
+            nums=5
+        )
 
         return ChatSessionOut.model_validate(
             {
                 "message": response_message,
-                "session_id": session_id
+                "session_id": session_id,
+                "additional_questions": [
+                    additional_question.strip() for additional_question in additional_questions.split('\n')
+                ],
             }
         )

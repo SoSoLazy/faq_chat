@@ -12,7 +12,7 @@ class ChromaClient:
     def add_document(self, doc_id: str, key_text, value_text: str, metadata: Optional[dict] = None):
         embedding = self.embed_function(key_text)
         self.collection.add(ids=[doc_id], embeddings=[embedding], documents=[value_text], metadatas=[metadata])
-    
+
     def search(self, query: str, n_results: int = 4) -> List[str]:
         query_embedding = self.embed_function(query)
         results = self.collection.query(query_embeddings=[query_embedding], n_results=n_results)
