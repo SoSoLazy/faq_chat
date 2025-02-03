@@ -33,24 +33,6 @@ class LLMService:
             )
         return cls._instance
 
-    def chat_one_time(self, message:str):
-        session_id = self.session_service.generate_session_id()
-
-        chat = self.open_ai_client.chat_completions(message=message)
-        
-        chat_history = ChatHistory.model_validate({
-            "request": message,
-            "response": chat
-        })
-        chat_history_list = [chat_history]
-
-        self.session_service.upsert_chat_history(
-            session_id, chat_history_list=ChatHistoryList.model_validate({
-                "chat_history_list": chat_history_list
-            })
-        )
-        return chat
-
     def chat_session(self, message:str, session_id: Optional[str]) -> ChatSessionOut:
         messages_with_session = ""
 
