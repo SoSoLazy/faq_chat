@@ -116,7 +116,7 @@ class LLMService:
                 "message": response_message,
                 "session_id": session_id,
                 "additional_questions": [
-                    additional_question.strip() for additional_question in additional_questions.split('\n')
+                    additional_question.replace("질문:", "").strip() for additional_question in additional_questions.split('\n')
                 ],
             }
         )
