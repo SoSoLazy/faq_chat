@@ -9,7 +9,6 @@ from schemas.chat_history import ChatHistory, ChatHistoryList
 from schemas.llm_model import ChatSessionOut
 from config import LLM_THRESHOLD_FOR_VALID_REQUEST, LLM_SESSION_LIMIT_FOR_CHAT, LLM_NONE_FAQ_REQUEST_MESSAGE
 
-
 class LLMService:
     """
     메인 서비스!
@@ -52,12 +51,6 @@ class LLMService:
         )
         return chat
 
-    def recommender(self, message: str) -> Optional[List[str]]:
-        """
-        질의응답 맥락에서 사용자가 궁금해할만한 다른 내용 추천
-        """
-        return None
-
     def chat_session(self, message:str, session_id: Optional[str]) -> ChatSessionOut:
         messages_with_session = ""
 
@@ -85,6 +78,7 @@ class LLMService:
         )
         if min(retrival_for_now_message["distances"][0]) >= LLM_THRESHOLD_FOR_VALID_REQUEST:
             response_message = LLM_NONE_FAQ_REQUEST_MESSAGE
+            metadata_list = []
         else:
             retrival_for_all_messages = self.rag_service.search_by_message(
                 f"{messages_with_session}\n질문 : {message}"
@@ -97,6 +91,8 @@ class LLMService:
                 chat_history=messages_with_session,
                 retrival_result=retrival_prompt,
             )
+
+            metadata_list = retrival_for_all_messages["metadatas"][0]
 
         # 4: 현재 세션의 채팅 결과를 다시 DB에 저장
         chat_history = {
@@ -112,7 +108,6 @@ class LLMService:
         )
 
         # 5: 응답 결과와 RAG 결과를 사용해서 사용자가 궁금해할만한 다른 내용 검색
-        
         # 5-1) 채팅 히스토리에서 사용자가 궁금해 할 질문 검색 (LLM + RAG)
         all_chat_histories = messages_with_session + f"\n질문: {message} \n응답: {response_message}"
         next_question = self.open_ai_client.chat_predict_next_question(all_chat_histories)
@@ -123,7 +118,7 @@ class LLMService:
 
         # 5-2) RAG 결과의 additional question 추출
         nest_question_list += [
-            metadata.get("additional_request") for metadata in retrival_for_all_messages["metadatas"][0]
+            metadata.get("additional_request") for metadata in metadata_list
             if metadata.get("additional_request")
         ]
 

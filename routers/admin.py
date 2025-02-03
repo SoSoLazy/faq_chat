@@ -11,4 +11,4 @@ def chat():
 
 @router.post("/rag_retrival")
 def rag_retrical(input_dict: dict):
-    return RagService.get_instance().search(input_dict["message"])
+    return RagService.get_instance().search_by_message(input_dict["message"])
